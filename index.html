@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Firefly FDE Value Capture</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px}
+body{font-family:'Adobe Clean','adobe-clean',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F5F5F5;color:#2C2C2C;line-height:1.5;min-height:100vh}
+:root{--black:#000;--charcoal:#2C2C2C;--mid:#6E6E6E;--light:#F5F5F5;--white:#fff;--red:#EB1000;--border:#E0E0E0}
+input,select,textarea,button{font-family:inherit;font-size:14px}
+
+/* HEADER */
+#app-header{background:#fff;border-bottom:1px solid var(--border);height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 32px;position:sticky;top:0;z-index:100}
+.logo{font-size:18px;font-weight:700;color:var(--red);letter-spacing:-0.5px}
+.header-left{display:flex;align-items:center;gap:12px}
+.header-divider{width:1px;height:20px;background:var(--border)}
+.header-title{font-size:13px;color:var(--mid)}
+.browse-link{font-size:12px;color:var(--mid);text-decoration:none;border:1px solid var(--border);padding:5px 12px;border-radius:4px;white-space:nowrap;transition:.15s}
+.browse-link:hover{border-color:var(--charcoal);color:var(--charcoal)}
+
+/* MAIN */
+#main{max-width:820px;margin:0 auto;padding:32px 24px 80px;width:100%}
+
+/* PROGRESS */
+#progress{display:flex;align-items:center;margin-bottom:40px}
+.step-wrap{display:flex;flex-direction:column;align-items:center}
+.step-circle{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;transition:.2s;flex-shrink:0;line-height:1}
+.step-circle.done{background:var(--black);color:#fff;cursor:pointer}
+.step-circle.active{background:var(--red);color:#fff}
+.step-circle.upcoming{background:#fff;border:1.5px solid var(--border);color:var(--mid)}
+.step-label{font-size:10px;color:var(--mid);margin-top:4px;white-space:nowrap}
+.step-line{flex:1;height:1px;background:var(--border);margin:0 5px;margin-bottom:14px}
+
+/* CARDS */
+.card{background:#fff;border:1px solid var(--border);border-radius:6px;padding:28px;box-shadow:0 1px 3px rgba(0,0,0,.07);margin-bottom:16px}
+.card-title{font-size:18px;font-weight:700;color:var(--black);margin-bottom:4px}
+.card-sub{font-size:13px;color:var(--mid);margin-bottom:24px}
+
+/* FORM */
+.form-row{margin-bottom:18px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+label{display:block;font-size:11px;font-weight:700;color:var(--charcoal);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.field{width:100%;border:1px solid var(--border);border-radius:4px;padding:9px 12px;color:var(--charcoal);background:#fff;outline:none;transition:border-color .15s}
+.field:focus{border-color:var(--black)}
+.field::placeholder{color:#bbb}
+select.field{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236E6E6E'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;cursor:pointer}
+.err-msg{font-size:12px;color:var(--red);margin-top:4px}
+.section-err{background:#fff5f5;border:1px solid #ffcdd2;border-radius:4px;padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:16px}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:4px;font-weight:600;font-size:13px;border:none;cursor:pointer;transition:.15s;line-height:1;white-space:nowrap}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:var(--black);color:#fff}
+.btn-primary:hover:not(:disabled){background:#333}
+.btn-secondary{background:#fff;color:var(--black);border:1.5px solid var(--black)}
+.btn-secondary:hover:not(:disabled){background:var(--light)}
+.btn-red{background:var(--red);color:#fff}
+.btn-red:hover:not(:disabled){opacity:.9}
+.btn-sm{padding:6px 12px;font-size:12px}
+.icon-btn{background:none;border:none;cursor:pointer;color:var(--mid);font-size:20px;padding:0 6px;line-height:1}
+.icon-btn:hover{color:var(--red)}
+
+/* NAV ROW */
+.nav-row{display:flex;justify-content:space-between;align-items:center;margin-top:24px}
+.nav-row.end{justify-content:flex-end}
+
+/* STEP 2 USE CASES */
+.uc-input-row{display:flex;gap:8px;margin-bottom:12px}
+.uc-list{list-style:none}
+.uc-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:4px;margin-bottom:8px;background:#fff}
+.uc-text{flex:1;font-size:13px}
+.empty-state{text-align:center;padding:24px 0;color:#bbb;font-size:13px}
+
+/* STEP 3 METRICS */
+.metric-group{margin-bottom:24px}
+.metric-group-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--mid);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.metric-card{border:1.5px solid var(--border);border-radius:5px;padding:10px 12px;cursor:pointer;transition:.15s;background:#fff;display:flex;align-items:flex-start;gap:10px;user-select:none}
+.metric-card.selected{border-color:var(--black);background:#f8f8f8}
+.metric-card:hover:not(.selected){border-color:#999}
+.mc-check{width:16px;height:16px;border-radius:3px;border:1.5px solid var(--border);flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;transition:.15s}
+.metric-card.selected .mc-check{background:var(--black);border-color:var(--black)}
+.mc-name{font-size:12px;color:var(--charcoal);line-height:1.4;flex:1}
+.badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;display:inline-block;margin-top:4px}
+.bc{background:#eef2ff;color:#4338ca}
+.br{background:#f0fdf4;color:#166534}
+.bb{background:#fff7ed;color:#92400e}
+.sel-count{font-size:12px;color:var(--mid);margin-bottom:16px;background:var(--light);padding:7px 12px;border-radius:4px;display:inline-block}
+
+/* STEP 4 TABLE */
+.bt{width:100%;border-collapse:collapse}
+.bt th{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--mid);padding:8px 8px;text-align:left;border-bottom:1px solid var(--border)}
+.bt td{padding:8px 6px;border-bottom:1px solid var(--light);vertical-align:middle}
+.bt tr:last-child td{border-bottom:none}
+.bt .mn{font-size:12px;font-weight:500;line-height:1.4}
+.num-inp{width:80px;border:1px solid var(--border);border-radius:4px;padding:6px 8px;font-size:13px;text-align:right;font-family:inherit;outline:none}
+.num-inp:focus{border-color:var(--black)}
+.unit-inp{width:80px;border:1px solid var(--border);border-radius:4px;padding:6px 8px;font-size:13px;font-family:inherit;outline:none}
+.unit-inp:focus{border-color:var(--black)}
+.dp{color:#166534;font-weight:700;font-size:12px}
+.dn{color:var(--red);font-weight:700;font-size:12px}
+
+/* STEP 5 FTE */
+.calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+.calc-results{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px}
+.calc-box{background:var(--light);border-radius:5px;padding:14px 18px}
+.calc-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--mid);margin-bottom:4px;font-weight:700}
+.calc-val{font-size:20px;font-weight:700;color:var(--black)}
+.savings-row{display:grid;grid-template-columns:1fr 160px 36px;gap:8px;align-items:center;margin-bottom:8px}
+.total-box{background:var(--black);color:#fff;border-radius:6px;padding:20px 24px;display:flex;justify-content:space-between;align-items:center;margin-top:24px}
+.tl{font-size:13px;color:rgba(255,255,255,.7)}
+.tv{font-size:26px;font-weight:700}
+
+/* STEP 6 SUMMARY */
+.sum-header{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.sum-field{background:var(--light);border-radius:4px;padding:10px 14px}
+.sf-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--mid);margin-bottom:2px;font-weight:700}
+.sf-val{font-size:14px;color:var(--charcoal);font-weight:500}
+.ssec{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--mid);font-weight:700;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.uc-sum-list{list-style:none}
+.uc-sum-item{padding:6px 0;font-size:13px;border-bottom:1px solid var(--light);color:var(--charcoal)}
+.uc-sum-item::before{content:"·";margin-right:8px;color:var(--red);font-weight:700}
+.sum-mt{width:100%;border-collapse:collapse;font-size:13px}
+.sum-mt th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--mid);padding:6px 8px;border-bottom:1px solid var(--border);text-align:left;font-weight:700}
+.sum-mt td{padding:7px 8px;border-bottom:1px solid var(--light);color:var(--charcoal)}
+.big-total{text-align:center;padding:28px;background:var(--black);border-radius:6px;margin:20px 0}
+.bt-lbl{font-size:12px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
+.bt-val{font-size:40px;font-weight:700;color:#fff;letter-spacing:-1px}
+.narrative{background:#f8f8f8;border-left:3px solid var(--border);padding:16px 20px;border-radius:0 4px 4px 0;font-size:13px;color:var(--charcoal);line-height:1.7;margin-bottom:20px}
+.export-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+/* MODAL */
+#modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center}
+#modal-overlay.show{display:flex}
+.modal{background:#fff;border-radius:8px;padding:32px;max-width:420px;width:90%}
+.modal-title{font-size:18px;font-weight:700;margin-bottom:8px}
+.modal-body{font-size:13px;color:var(--mid);margin-bottom:24px;line-height:1.6}
+.modal-actions{display:flex;gap:10px}
+
+/* COVER PAGE */
+.cover-page{max-width:820px}
+.cover-hero{background:var(--black);border-radius:8px;padding:48px 52px;margin-bottom:24px;position:relative;overflow:hidden}
+.cover-hero::before{content:'';position:absolute;top:0;right:0;width:320px;height:100%;background:repeating-linear-gradient(135deg,transparent,transparent 40px,rgba(255,255,255,.015) 40px,rgba(255,255,255,.015) 41px);pointer-events:none}
+.cover-eyebrow{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--red);margin-bottom:20px}
+.cover-title{font-size:36px;font-weight:700;color:#fff;line-height:1.15;margin-bottom:12px;letter-spacing:-.5px}
+.cover-title span{color:var(--red)}
+.cover-desc{font-size:15px;color:rgba(255,255,255,.65);line-height:1.6;max-width:520px;margin-bottom:32px}
+.cover-cta-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.cover-deadline{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:4px;padding:8px 14px;font-size:12px;color:rgba(255,255,255,.7);margin-top:24px}
+.cover-deadline strong{color:#fff}
+.cover-cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px}
+.cover-card{background:#fff;border:1px solid var(--border);border-radius:6px;padding:20px 22px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.cover-card-num{font-size:28px;font-weight:700;color:var(--black);line-height:1;margin-bottom:6px}
+.cover-card-label{font-size:12px;color:var(--mid);line-height:1.4}
+.cover-what{background:#fff;border:1px solid var(--border);border-radius:6px;padding:24px 28px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.cover-what-title{font-size:14px;font-weight:700;color:var(--black);margin-bottom:14px}
+.cover-steps-list{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cover-steps-list li{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--charcoal);line-height:1.4}
+.cover-step-dot{width:20px;height:20px;border-radius:50%;background:var(--light);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--mid);flex-shrink:0;margin-top:1px}
+.cover-repo-btn{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1.5px solid var(--black);color:var(--black);padding:11px 20px;border-radius:4px;font-size:13px;font-weight:600;text-decoration:none;transition:.15s;cursor:pointer}
+.cover-repo-btn:hover{background:var(--light)}
+.cover-repo-btn .ext-icon{font-size:11px;color:var(--mid)}
+@media(max-width:640px){
+  .cover-hero{padding:32px 28px}
+  .cover-title{font-size:26px}
+  .cover-cards{grid-template-columns:1fr}
+  .cover-steps-list{grid-template-columns:1fr}
+}
+
+/* COVER PAGE */
+.hidden{display:none!important}
+.sep{border-top:1px solid var(--border);margin:20px 0}
+
+@media(max-width:600px){
+  .two-col,.metrics-grid,.calc-results,.sum-header{grid-template-columns:1fr}
+  .savings-row{grid-template-columns:1fr 120px 32px}
+  #app-header{padding:0 16px}
+  #main{padding:20px 16px 60px}
+}
+@media print{
+  #app-header,#progress,.nav-row,.export-row,.no-print{display:none!important}
+  body{background:#fff}
+  .card{box-shadow:none;break-inside:avoid}
+}
+</style>
+</head>
+<body>
+
+<header id="app-header">
+  <div class="header-left">
+    <span class="logo">Adobe</span>
+    <div class="header-divider"></div>
+    <span class="header-title">Firefly Services &middot; FDE Value Capture</span>
+  </div>
+  <a class="browse-link" href="https://adobe-my.sharepoint.com/:f:/r/personal/sta20648_adobe_com/Documents/Value%20POV%20for%20Approved%20Customer%20Use%20Cases?csf=1&web=1&e=HbzQRj" target="_blank" rel="noopener">Browse Example Artifacts ↗</a>
+</header>
+
+<div id="main">
+  <div id="progress"></div>
+  <div id="step-container"></div>
+  <div class="nav-row" id="nav-row"></div>
+</div>
+
+<!-- Resume Modal -->
+<div id="modal-overlay">
+  <div class="modal">
+    <div class="modal-title">Resume session?</div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="btn-resume">Resume session</button>
+      <button class="btn btn-secondary" id="btn-fresh">Start fresh</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ──────────────────────────────────────────────────────────────────
+
+const STORAGE_KEY = 'fde-value-capture';
+
+const COUNTRIES = [
+  {n:'Austria',r:59662},{n:'Belgium',r:66040},{n:'Bulgaria',r:16649},
+  {n:'Czech Republic',r:29952},{n:'Denmark',r:58487},{n:'Finland',r:57912},
+  {n:'France',r:68150},{n:'Germany',r:66358},{n:'Greece',r:34381},
+  {n:'Hungary',r:22600},{n:'Ireland',r:55575},{n:'Italy',r:49400},
+  {n:'Luxembourg',r:62424},{n:'Netherlands',r:82973},{n:'Norway',r:70742},
+  {n:'Poland',r:26871},{n:'Portugal',r:34650},{n:'Romania',r:16360},
+  {n:'Spain',r:49617},{n:'Sweden',r:78852},{n:'Switzerland',r:90440},
+  {n:'United Kingdom',r:73160}
+];
+
+const INDUSTRIES = [
+  'Media & Entertainment','Retail & eCommerce','Financial Services',
+  'Technology & B2B','CPG & Consumer','Sports & Live Events',
+  'Grocery & Supermarket','Healthcare & Pharma','Automotive','Travel & Hospitality'
+];
+
+const METRICS = [
+  {id:'m01',g:'01 Financial Impact',n:'Dollar savings — labor (hours saved × blended rate)',t:'Cost'},
+  {id:'m02',g:'01 Financial Impact',n:'Agency & production cost avoided',t:'Cost'},
+  {id:'m03',g:'01 Financial Impact',n:'Cost per asset (fully loaded production spend ÷ approved assets)',t:'Cost'},
+  {id:'m04',g:'01 Financial Impact',n:'FTE equivalent reclaimed (hours saved ÷ 1,900 hrs)',t:'Cost'},
+  {id:'m05',g:'01 Financial Impact',n:'Incremental revenue attributed to content (content ROI / lift)',t:'Revenue'},
+  {id:'m06',g:'01 Financial Impact',n:'Asset reuse rate (assets reused ÷ total available for reuse)',t:'Cost'},
+  {id:'m07',g:'01 Financial Impact',n:'Content-influenced pipeline / deal value',t:'Revenue'},
+  {id:'m08',g:'02 Operational Excellence',n:'Time to market (brief approval → asset live in channel)',t:'Both'},
+  {id:'m09',g:'02 Operational Excellence',n:'Content production rate (unique approved assets & variants per period)',t:'Cost'},
+  {id:'m10',g:'02 Operational Excellence',n:'Review cycle time (rounds & elapsed time from ready → approved)',t:'Cost'},
+  {id:'m11',g:'02 Operational Excellence',n:'Brand consistency score (AI assets passing review without rework)',t:'Cost'},
+  {id:'m12',g:'02 Operational Excellence',n:'Content variant coverage (markets / SKUs / channels automated)',t:'Revenue'},
+  {id:'m13',g:'02 Operational Excellence',n:'Creator productivity (output volume per FTE)',t:'Cost'},
+  {id:'m14',g:'03 Activation & Adoption',n:'Automation rate (% of assets generated via FFCP / Firefly workflows)',t:'Cost'},
+  {id:'m15',g:'03 Activation & Adoption',n:'Use cases live in production (real output, not pilots)',t:'Both'},
+  {id:'m16',g:'03 Activation & Adoption',n:'Use case success metric hit rate (% meeting agreed KPIs)',t:'Both'},
+  {id:'m17',g:'03 Activation & Adoption',n:'Active users / teams on platform (adoption breadth)',t:'Cost'},
+  {id:'m18',g:'03 Activation & Adoption',n:'Workflow automation penetration (% of eligible workflows automated)',t:'Cost'},
+  {id:'m19',g:'03 Activation & Adoption',n:'Personalisation depth (data-enabled variants per master creative)',t:'Revenue'},
+  {id:'m20',g:'03 Activation & Adoption',n:'Localisation & variant coverage (% of content localised across markets)',t:'Both'},
+  {id:'m21',g:'03 Activation & Adoption',n:'CSC maturity index (organisational AI & content supply chain score)',t:'Cost'},
+  {id:'m22',g:'04 Strategic & Platform Value',n:'Innovation pipeline (validated future use cases committed by sponsor)',t:'Revenue'},
+  {id:'m23',g:'04 Strategic & Platform Value',n:'Customer-confirmed value (sponsor sign-off on reported figures)',t:'Both'},
+  {id:'m24',g:'04 Strategic & Platform Value',n:'Adobe surface coverage (distinct products actively in use)',t:'Both'},
+  {id:'m25',g:'04 Strategic & Platform Value',n:'Cross-channel content reach (channels powered by automation)',t:'Revenue'},
+  {id:'m26',g:'04 Strategic & Platform Value',n:'Content personalisation scale (distinct audience segments served)',t:'Revenue'},
+  {id:'m27',g:'04 Strategic & Platform Value',n:'Regulatory & brand risk incident reduction',t:'Cost'},
+  {id:'m28',g:'04 Strategic & Platform Value',n:'Executive sponsor engagement & advocacy',t:'Both'}
+];
+
+const PRESELECT = {
+  'Media & Entertainment':['m08','m09','m12','m14','m19','m25'],
+  'Retail & eCommerce':['m01','m03','m12','m20','m26','m05'],
+  'Financial Services':['m27','m11','m23','m16','m01'],
+  'Technology & B2B':['m13','m14','m15','m22','m24'],
+  'CPG & Consumer':['m20','m09','m03','m06','m12','m08'],
+  'Sports & Live Events':['m08','m09','m13','m25','m14'],
+  'Grocery & Supermarket':['m03','m02','m20','m12','m14'],
+  'Healthcare & Pharma':['m27','m11','m10','m01','m23'],
+  'Automotive':['m20','m12','m08','m03','m19'],
+  'Travel & Hospitality':['m26','m19','m25','m08','m09']
+};
+
+const UNIT_DEF = {
+  m01:'€',m02:'€',m03:'€',m04:'FTEs',m05:'€',m06:'%',m07:'€',
+  m08:'days',m09:'assets/mo',m10:'days',m11:'%',m12:'%',m13:'assets/FTE',
+  m14:'%',m15:'use cases',m16:'%',m17:'users',m18:'%',m19:'variants',
+  m20:'%',m21:'score',m22:'use cases',m23:'%',m24:'products',m25:'channels',
+  m26:'segments',m27:'incidents',m28:'score'
+};
+
+// ─── STATE ─────────────────────────────────────────────────────────────────
+
+function defaultState() {
+  return {
+    step:0, emName:'', customerName:'', industry:'', country:'',
+    useCases:[], selectedMetrics:[], baselines:{}, targets:{}, units:{},
+    hoursPerWeek:'', numMarketers:'', additionalSavings:[], savedAt:null
+  };
+}
+
+let S = defaultState();
+
+function save() {
+  S.savedAt = new Date().toISOString();
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(S)); } catch(e){}
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) { const p = JSON.parse(raw); if (p && p.customerName) return p; }
+  } catch(e){}
+  return null;
+}
+
+// ─── UTILS ─────────────────────────────────────────────────────────────────
+
+const fmt = n => isNaN(n) || n === null ? '—' : new Intl.NumberFormat('en-GB').format(Math.round(n));
+const fmtE = n => (!n || isNaN(n) || Number(n) === 0) ? '€0' : '€' + fmt(n);
+const today = () => new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const q = id => document.getElementById(id);
+const qa = s => document.querySelectorAll(s);
+
+function delta(id) {
+  const b = parseFloat(S.baselines[id]);
+  const t = parseFloat(S.targets[id]);
+  if (isNaN(b)||isNaN(t)) return null;
+  const abs = t - b;
+  const pct = b !== 0 ? ((abs/Math.abs(b))*100).toFixed(1) : null;
+  return {abs, pct};
+}
+
+function countryRate() {
+  const c = COUNTRIES.find(x => x.n === S.country);
+  return c ? c.r : 0;
+}
+
+function calcFTE() {
+  const h = parseFloat(S.hoursPerWeek)||0;
+  const n = parseFloat(S.numMarketers)||0;
+  const annHrs = h*n*52;
+  const rate = countryRate();
+  const fteSave = rate > 0 ? (annHrs/1900)*rate : 0;
+  const ftePct = n > 0 ? ((annHrs/(n*1900))*100).toFixed(1) : '0.0';
+  const extra = (S.additionalSavings||[]).reduce((s,r)=>s+(parseFloat(r.amount)||0),0);
+  return {h, n, annHrs, fteSave, ftePct, extra, grand: fteSave+extra};
+}
+
+// ─── RENDER ENGINE ─────────────────────────────────────────────────────────
+
+function render() {
+  const prog = q('progress');
+  const c = q('step-container');
+  const nav = q('nav-row');
+
+  if (S.step === 0) {
+    prog.style.display = 'none';
+    c.innerHTML = step0HTML();
+    nav.innerHTML = '';
+    bindEvents();
+    return;
+  }
+
+  prog.style.display = 'flex';
+  renderProgress();
+
+  switch(S.step) {
+    case 1: c.innerHTML = step1HTML(); nav.innerHTML = navHTML(true,true,'Continue to Use Cases →'); break;
+    case 2: c.innerHTML = step2HTML(); nav.innerHTML = navHTML(true,true,'Continue to Metrics →'); break;
+    case 3: c.innerHTML = step3HTML(); nav.innerHTML = navHTML(true,true,'Continue to Baseline →'); break;
+    case 4: c.innerHTML = step4HTML(); nav.innerHTML = navHTML(true,true,'Continue to FTE Value →'); break;
+    case 5: c.innerHTML = step5HTML(); nav.innerHTML = navHTML(true,true,'View ROI Summary →'); break;
+    case 6: c.innerHTML = step6HTML(); nav.innerHTML = navHTML(true,false,''); break;
+  }
+  bindEvents();
+}
+
+function navHTML(back, fwd, fwdLabel) {
+  let h = '';
+  if (back) h += `<button class="btn btn-secondary" id="btn-back">← Back</button>`;
+  else h += '<span></span>';
+  if (fwd) h += `<button class="btn btn-primary" id="btn-next">${esc(fwdLabel)}</button>`;
+  return h;
+}
+
+function renderProgress() {
+  const labels = ['Customer','Use Cases','Metrics','Baseline','FTE Value','Summary'];
+  let h = '';
+  for (let i = 1; i <= 6; i++) {
+    const cls = S.step > i ? 'done' : S.step === i ? 'active' : 'upcoming';
+    const icon = S.step > i ? '✓' : i;
+    const title = S.step > i ? `title="Go back to ${labels[i-1]}"` : '';
+    h += `<div class="step-wrap">
+      <div class="step-circle ${cls}" data-step="${i}" ${title}>${icon}</div>
+      <div class="step-label">${labels[i-1]}</div>
+    </div>`;
+    if (i < 6) h += '<div class="step-line"></div>';
+  }
+  q('progress').innerHTML = h;
+}
+
+// ─── STEP 0 — COVER ────────────────────────────────────────────────────────
+
+function step0HTML() {
+  return `<div class="cover-page">
+
+    <div class="cover-hero">
+      <div class="cover-eyebrow">Firefly Services · FDE Workshop</div>
+      <div class="cover-title">FDE Value Capture<br><span>Workshop</span></div>
+      <div class="cover-desc">
+        The objective of today's session is to ensure that every Engagement Manager walks away with a detailed, structured plan for having value conversations with each of their customers — and the assets to make those conversations land.
+      </div>
+      <div class="cover-cta-row">
+        <button class="btn btn-red" id="btn-start-session" style="font-size:14px;padding:12px 28px">Start building your value plan →</button>
+        <a class="cover-repo-btn" href="https://adobe-my.sharepoint.com/:f:/r/personal/sta20648_adobe_com/Documents/Value%20POV%20for%20Approved%20Customer%20Use%20Cases?csf=1&web=1&e=bonOOT" target="_blank" rel="noopener">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.4"/><path d="M5 9v3a1 1 0 001 1h6a1 1 0 001-1V6a1 1 0 00-1-1H9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          Browse example value presentations
+          <span class="ext-icon">↗</span>
+        </a>
+      </div>
+      <div class="cover-deadline">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="rgba(255,255,255,.5)" stroke-width="1.2"/><path d="M6.5 3.5v3l2 1.5" stroke="rgba(255,255,255,.5)" stroke-width="1.2" stroke-linecap="round"/></svg>
+        Target: every EM has a completed value plan per customer by <strong>31 July 2025</strong>
+      </div>
+    </div>
+
+    <div class="cover-cards">
+      <div class="cover-card">
+        <div class="cover-card-num">6</div>
+        <div class="cover-card-label">guided steps to complete your value plan</div>
+      </div>
+      <div class="cover-card">
+        <div class="cover-card-num">~30<span style="font-size:16px;font-weight:500;color:var(--mid)"> min</span></div>
+        <div class="cover-card-label">estimated time to complete per customer</div>
+      </div>
+      <div class="cover-card">
+        <div class="cover-card-num">1</div>
+        <div class="cover-card-label">copy-paste Jira template ready at the end</div>
+      </div>
+    </div>
+
+    <div class="cover-what">
+      <div class="cover-what-title">By the end of this session you will have:</div>
+      <ul class="cover-steps-list">
+        <li><div class="cover-step-dot">1</div><span><strong>Customer setup</strong> — EM, customer name, industry &amp; country locked in</span></li>
+        <li><div class="cover-step-dot">2</div><span><strong>Approved use cases</strong> — the specific Firefly Services scenarios in scope</span></li>
+        <li><div class="cover-step-dot">3</div><span><strong>KPIs selected</strong> — industry-relevant metrics chosen from the FDE framework</span></li>
+        <li><div class="cover-step-dot">4</div><span><strong>Baseline &amp; targets</strong> — current state documented, improvement targets set</span></li>
+        <li><div class="cover-step-dot">5</div><span><strong>FTE value calculated</strong> — labour saving quantified in local currency</span></li>
+        <li><div class="cover-step-dot">6</div><span><strong>ROI summary exported</strong> — narrative &amp; Jira-ready template generated</span></li>
+      </ul>
+    </div>
+
+  </div>`;
+}
+
+// ─── STEP 1 ────────────────────────────────────────────────────────────────
+
+function step1HTML() {
+  const countryOpts = COUNTRIES.map(c =>
+    `<option value="${esc(c.n)}" ${S.country===c.n?'selected':''}>${esc(c.n)} — €${fmt(c.r)}/yr</option>`
+  ).join('');
+  const indOpts = INDUSTRIES.map(i =>
+    `<option value="${esc(i)}" ${S.industry===i?'selected':''}>${esc(i)}</option>`
+  ).join('');
+
+  return `<div class="card">
+    <div class="card-title">Customer Setup</div>
+    <div class="card-sub">Define the engagement context. The industry selection pre-selects the most relevant metrics for your customer.</div>
+    <div id="s1-errors"></div>
+    <div class="form-row two-col">
+      <div>
+        <label>EM Name *</label>
+        <input class="field" id="f-em" placeholder="Your full name" value="${esc(S.emName)}"/>
+        <div class="err-msg hidden" id="e-em">Required</div>
+      </div>
+      <div>
+        <label>Customer Name *</label>
+        <input class="field" id="f-cust" placeholder="e.g. Maison Lumière" value="${esc(S.customerName)}"/>
+        <div class="err-msg hidden" id="e-cust">Required</div>
+      </div>
+    </div>
+    <div class="form-row two-col">
+      <div>
+        <label>Industry *</label>
+        <select class="field" id="f-ind">
+          <option value="">Select industry…</option>
+          ${indOpts}
+        </select>
+        <div class="err-msg hidden" id="e-ind">Required</div>
+      </div>
+      <div>
+        <label>Country *</label>
+        <select class="field" id="f-country">
+          <option value="">Select country…</option>
+          ${countryOpts}
+        </select>
+        <div class="err-msg hidden" id="e-country">Required</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ─── STEP 2 ────────────────────────────────────────────────────────────────
+
+function step2HTML() {
+  const items = S.useCases.map((uc, i) =>
+    `<li class="uc-item">
+      <span class="uc-text">${esc(uc)}</span>
+      <button class="icon-btn" data-del-uc="${i}" title="Remove">×</button>
+    </li>`
+  ).join('');
+
+  return `<div class="card">
+    <div class="card-title">Use Cases</div>
+    <div class="card-sub">Document how ${esc(S.customerName||'the customer')} will use Firefly Services. Add at least one.</div>
+    <div class="section-err hidden" id="uc-err">Add at least one use case before continuing.</div>
+    <div class="uc-input-row">
+      <input class="field" id="uc-input" placeholder="e.g. Automated banner localisation for 12 markets" style="flex:1"/>
+      <button class="btn btn-primary" id="btn-add-uc">Add</button>
+    </div>
+    <ul class="uc-list" id="uc-list">
+      ${items || '<div class="empty-state">No use cases yet — type above and press Add or Enter.</div>'}
+    </ul>
+  </div>`;
+}
+
+// ─── STEP 3 ────────────────────────────────────────────────────────────────
+
+function step3HTML() {
+  const groups = [...new Set(METRICS.map(m => m.g))];
+  let h = `<div class="card">
+    <div class="card-title">Metrics Selection</div>
+    <div class="card-sub">Pre-selected for <strong>${esc(S.industry)}</strong>. Adjust to match your customer's priorities — each selected metric becomes a baseline row.</div>
+    <div class="section-err hidden" id="met-err">Select at least one metric before continuing.</div>
+    <div class="sel-count" id="sel-count">${S.selectedMetrics.length} metric${S.selectedMetrics.length!==1?'s':''} selected</div>`;
+
+  for (const g of groups) {
+    h += `<div class="metric-group"><div class="metric-group-title">${esc(g)}</div><div class="metrics-grid">`;
+    for (const m of METRICS.filter(x => x.g === g)) {
+      const sel = S.selectedMetrics.includes(m.id);
+      const bc = m.t==='Cost'?'bc':m.t==='Revenue'?'br':'bb';
+      const check = sel ? `<svg width="10" height="8" viewBox="0 0 10 8"><path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` : '';
+      h += `<div class="metric-card${sel?' selected':''}" data-metric="${m.id}">
+        <div class="mc-check">${check}</div>
+        <div>
+          <div class="mc-name">${esc(m.n)}</div>
+          <span class="badge ${bc}">${esc(m.t)}</span>
+        </div>
+      </div>`;
+    }
+    h += `</div></div>`;
+  }
+  h += `</div>`;
+  return h;
+}
+
+// ─── STEP 4 ────────────────────────────────────────────────────────────────
+
+function step4HTML() {
+  const sel = METRICS.filter(m => S.selectedMetrics.includes(m.id));
+  let rows = sel.map(m => {
+    const d = delta(m.id);
+    let deltaHtml = '<span style="color:#ccc">—</span>';
+    if (d) {
+      const sign = d.abs >= 0 ? '+' : '';
+      const pctStr = d.pct !== null ? ` (${parseFloat(d.pct)>=0?'+':''}${d.pct}%)` : '';
+      deltaHtml = `<span class="${d.abs>=0?'dp':'dn'}">${sign}${fmt(d.abs)}${pctStr}</span>`;
+    }
+    const shortName = m.n.split(' (')[0];
+    return `<tr>
+      <td class="mn">${esc(shortName)}</td>
+      <td><input type="number" class="num-inp" data-base="${m.id}" value="${esc(S.baselines[m.id]||'')}" placeholder="0"/></td>
+      <td><input type="number" class="num-inp" data-tgt="${m.id}" value="${esc(S.targets[m.id]||'')}" placeholder="0"/></td>
+      <td><input type="text" class="unit-inp" data-unit="${m.id}" value="${esc(S.units[m.id]||'')}"/></td>
+      <td id="delta-${m.id}">${deltaHtml}</td>
+    </tr>`;
+  }).join('');
+
+  return `<div class="card">
+    <div class="card-title">Baseline &amp; Target Inputs</div>
+    <div class="card-sub">Enter current (baseline) and expected post-implementation (target) values. Deltas calculate automatically.</div>
+    <div style="overflow-x:auto">
+      <table class="bt">
+        <thead><tr>
+          <th style="width:36%">Metric</th>
+          <th style="width:14%;text-align:right">Baseline</th>
+          <th style="width:14%;text-align:right">Target</th>
+          <th style="width:14%">Unit</th>
+          <th style="width:22%">Delta</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+// ─── STEP 5 ────────────────────────────────────────────────────────────────
+
+function step5HTML() {
+  const {h, n, annHrs, fteSave, ftePct, extra, grand} = calcFTE();
+  const rate = countryRate();
+  const savRows = (S.additionalSavings||[]).map((r, i) =>
+    `<div class="savings-row">
+      <input class="field" data-savlbl="${i}" placeholder="e.g. Agency fee reduction" value="${esc(r.label)}"/>
+      <input type="number" class="field" data-savamt="${i}" placeholder="€ amount" value="${esc(r.amount)}"/>
+      <button class="icon-btn" data-del-sav="${i}">×</button>
+    </div>`
+  ).join('');
+
+  return `<div class="card">
+    <div class="card-title">FTE Value Calculator</div>
+    <div class="card-sub">Estimate labour cost value of time saved. Uses the ${esc(S.country)} annual marketer FTE rate of ${fmtE(rate)}.</div>
+    <div class="calc-grid">
+      <div>
+        <label>Hours saved per marketer per week</label>
+        <input type="number" class="field" id="f-hrs" placeholder="e.g. 3" value="${esc(S.hoursPerWeek)}" min="0" step="0.5"/>
+      </div>
+      <div>
+        <label>Number of marketers impacted</label>
+        <input type="number" class="field" id="f-mkt" placeholder="e.g. 50" value="${esc(S.numMarketers)}" min="0"/>
+      </div>
+    </div>
+    <div class="calc-results">
+      <div class="calc-box"><div class="calc-lbl">Annual hours saved</div><div class="calc-val" id="cv-hrs">${fmt(annHrs)}</div></div>
+      <div class="calc-box"><div class="calc-lbl">% of FTE time</div><div class="calc-val" id="cv-pct">${ftePct}%</div></div>
+      <div class="calc-box"><div class="calc-lbl">FTE cost saving</div><div class="calc-val" id="cv-fte" style="font-size:17px">${fmtE(fteSave)}</div></div>
+    </div>
+    <div class="sep"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <label style="margin:0">Additional Savings &amp; Revenue Impact</label>
+      <button class="btn btn-secondary btn-sm" id="btn-add-sav">+ Add row</button>
+    </div>
+    <div id="sav-rows">${savRows}</div>
+    ${(S.additionalSavings||[]).length===0?'<div class="empty-state" style="text-align:left">No additional rows — click Add row to include other savings or revenue.</div>':''}
+    <div class="total-box">
+      <div><div class="tl">Total Estimated Annual Value</div><div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px">FTE cost saving + additional savings</div></div>
+      <div class="tv" id="cv-grand">${fmtE(grand)}</div>
+    </div>
+  </div>`;
+}
+
+// ─── STEP 6 ────────────────────────────────────────────────────────────────
+
+function step6HTML() {
+  const {n, annHrs, fteSave, grand} = calcFTE();
+  const sel = METRICS.filter(m => S.selectedMetrics.includes(m.id));
+  const groupNames = [...new Set(sel.map(m => m.g.split(' ').slice(1).join(' ')))];
+  const dateStr = today();
+  const addlRows = (S.additionalSavings||[]).filter(r => r.label && r.amount);
+  const addlText = addlRows.length > 0
+    ? ` Additional identified savings of ${fmtE(addlRows.reduce((s,r)=>s+(parseFloat(r.amount)||0),0))} include ${addlRows.map(r=>r.label).join(', ')}.`
+    : '';
+  const narrative = `Prepared by ${S.emName} · ${dateStr}. By implementing Adobe Firefly Services, ${S.customerName} — a ${S.industry} business based in ${S.country} — could realise approximately ${fmtE(grand)} in annual value. Key efficiency gains span ${groupNames.join(', ')}. Across ${n} impacted marketers, this represents an estimated ${fmt(annHrs)} hours saved annually — equivalent to ${fmtE(fteSave)} in reclaimed FTE cost.${addlText}`;
+
+  const summaryFields = [
+    ['EM Name', S.emName], ['Customer', S.customerName],
+    ['Industry', S.industry], ['Country', S.country], ['Date', dateStr]
+  ];
+  const sfHTML = summaryFields.map(([l,v]) =>
+    `<div class="sum-field"><div class="sf-lbl">${esc(l)}</div><div class="sf-val">${esc(v)||'—'}</div></div>`
+  ).join('');
+
+  const ucHTML = S.useCases.map(u => `<li class="uc-sum-item">${esc(u)}</li>`).join('');
+
+  const metRows = sel.map(m => {
+    const d = delta(m.id);
+    const shortN = m.n.split(' (')[0];
+    let dHtml = '—';
+    if (d) {
+      const sign = d.abs >= 0 ? '+' : '';
+      const pctStr = d.pct !== null ? ` (${parseFloat(d.pct)>=0?'+':''}${d.pct}%)` : '';
+      dHtml = `<span class="${d.abs>=0?'dp':'dn'}">${sign}${fmt(d.abs)}${pctStr}</span>`;
+    }
+    return `<tr>
+      <td style="font-weight:500">${esc(shortN)}</td>
+      <td style="color:var(--mid)">${esc(S.baselines[m.id])||'—'}</td>
+      <td style="color:var(--mid)">${esc(S.targets[m.id])||'—'}</td>
+      <td>${dHtml}</td>
+      <td style="color:var(--mid)">${esc(S.units[m.id]||'')}</td>
+    </tr>`;
+  }).join('');
+
+  const addlHTML = addlRows.length > 0 ? `
+    <div class="ssec">Additional Savings</div>
+    ${addlRows.map(r => `<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--light);color:var(--charcoal)"><span>${esc(r.label)}</span><span style="font-weight:600">${fmtE(parseFloat(r.amount))}</span></div>`).join('')}
+  ` : '';
+
+  const fteHTML = (annHrs > 0) ? `
+    <div class="ssec">FTE Value</div>
+    <div style="font-size:13px;color:var(--charcoal)">${fmtE(fteSave)} — ${fmt(annHrs)} hours saved across ${n} marketers</div>
+  ` : '';
+
+  return `<div class="card">
+    <div class="card-title">ROI Summary</div>
+    <div class="card-sub">Your complete value capture plan — ready to export to Jira or download as a PDF brief.</div>
+
+    <div class="sum-header">${sfHTML}</div>
+
+    <div class="ssec">Use Cases</div>
+    <ul class="uc-sum-list">${ucHTML}</ul>
+
+    <div class="ssec">Selected Metrics</div>
+    <div style="overflow-x:auto">
+      <table class="sum-mt">
+        <thead><tr><th>Metric</th><th>Baseline</th><th>Target</th><th>Delta</th><th>Unit</th></tr></thead>
+        <tbody>${metRows}</tbody>
+      </table>
+    </div>
+
+    ${fteHTML}
+    ${addlHTML}
+
+    <div class="big-total">
+      <div class="bt-lbl">Total Estimated Annual Value</div>
+      <div class="bt-val">${fmtE(grand)}</div>
+    </div>
+
+    <div class="ssec">Narrative</div>
+    <div class="narrative" id="narrative-text">${esc(narrative)}</div>
+
+    <div class="export-row">
+      <button class="btn btn-primary" id="btn-copy">📋 Copy to Clipboard</button>
+      <button class="btn btn-secondary" id="btn-pdf">⬇ Download PDF</button>
+      <button class="btn btn-red" id="btn-new" style="margin-left:auto">Start New Customer</button>
+    </div>
+  </div>`;
+}
+
+// ─── EVENT BINDING ──────────────────────────────────────────────────────────
+
+function bindEvents() {
+  // ── STEP 0 (COVER) ──
+  if (S.step === 0) {
+    const btnStart = q('btn-start-session');
+    if (btnStart) btnStart.onclick = () => { S.step = 1; save(); render(); };
+    return;
+  }
+
+  // Back button
+  const back = q('btn-back');
+  if (back) back.onclick = () => { S.step = Math.max(0, S.step - 1); save(); render(); };
+
+  // Step circles (completed ones = clickable)
+  qa('.step-circle.done').forEach(el => {
+    el.onclick = () => { S.step = parseInt(el.dataset.step); save(); render(); };
+  });
+
+  // ── STEP 1 ──
+  if (S.step === 1) {
+    ['em','cust'].forEach(k => {
+      const fld = q(`f-${k}`);
+      const key = k==='em'?'emName':'customerName';
+      if (fld) fld.oninput = () => { S[key] = fld.value; save(); };
+    });
+
+    const fInd = q('f-ind');
+    if (fInd) fInd.onchange = () => {
+      S.industry = fInd.value;
+      S.selectedMetrics = PRESELECT[fInd.value] || [];
+      save();
+    };
+
+    const country = q('f-country');
+    if (country) country.onchange = () => { S.country = country.value; save(); };
+
+    const next = q('btn-next');
+    if (next) next.onclick = () => {
+      const errs = {em:!S.emName.trim(), cust:!S.customerName.trim(), ind:!S.industry, country:!S.country};
+      let any = false;
+      for (const [k,v] of Object.entries(errs)) {
+        const el = q(`e-${k}`); if (el) el.classList.toggle('hidden', !v);
+        if (v) any = true;
+      }
+      if (!any) { S.step = 2; save(); render(); }
+    };
+  }
+
+  // ── STEP 2 ──
+  if (S.step === 2) {
+    const input = q('uc-input');
+    const addUC = () => {
+      const v = input.value.trim();
+      if (!v) return;
+      S.useCases.push(v);
+      input.value = '';
+      save();
+      q('uc-err').classList.add('hidden');
+      // re-render just the list
+      const list = q('uc-list');
+      if (list) list.outerHTML = `<ul class="uc-list" id="uc-list">${S.useCases.map((uc,i)=>`<li class="uc-item"><span class="uc-text">${esc(uc)}</span><button class="icon-btn" data-del-uc="${i}">×</button></li>`).join('')}</ul>`;
+      bindDelUC();
+    };
+    if (input) {
+      input.onkeydown = e => { if (e.key==='Enter') addUC(); };
+      q('btn-add-uc').onclick = addUC;
+    }
+    bindDelUC();
+
+    const next = q('btn-next');
+    if (next) next.onclick = () => {
+      if (S.useCases.length === 0) { q('uc-err').classList.remove('hidden'); return; }
+      S.step = 3; save(); render();
+    };
+  }
+
+  // ── STEP 3 ──
+  if (S.step === 3) {
+    qa('.metric-card').forEach(card => {
+      card.onclick = () => {
+        const id = card.dataset.metric;
+        if (S.selectedMetrics.includes(id)) {
+          S.selectedMetrics = S.selectedMetrics.filter(x=>x!==id);
+          card.classList.remove('selected');
+          card.querySelector('.mc-check').innerHTML = '';
+        } else {
+          S.selectedMetrics.push(id);
+          card.classList.add('selected');
+          card.querySelector('.mc-check').innerHTML = `<svg width="10" height="8" viewBox="0 0 10 8"><path d="M1 4l3 3 5-6" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+        }
+        save();
+        const sc = q('sel-count');
+        if (sc) sc.textContent = `${S.selectedMetrics.length} metric${S.selectedMetrics.length!==1?'s':''} selected`;
+      };
+    });
+
+    const next = q('btn-next');
+    if (next) next.onclick = () => {
+      if (S.selectedMetrics.length === 0) { q('met-err').classList.remove('hidden'); return; }
+      S.selectedMetrics.forEach(id => { if (!S.units[id]) S.units[id] = UNIT_DEF[id]||''; });
+      S.step = 4; save(); render();
+    };
+  }
+
+  // ── STEP 4 ──
+  if (S.step === 4) {
+    qa('[data-base]').forEach(inp => {
+      inp.oninput = () => { S.baselines[inp.dataset.base] = inp.value; save(); updateDelta(inp.dataset.base); };
+    });
+    qa('[data-tgt]').forEach(inp => {
+      inp.oninput = () => { S.targets[inp.dataset.tgt] = inp.value; save(); updateDelta(inp.dataset.tgt); };
+    });
+    qa('[data-unit]').forEach(inp => {
+      inp.oninput = () => { S.units[inp.dataset.unit] = inp.value; save(); };
+    });
+
+    const next = q('btn-next');
+    if (next) next.onclick = () => { S.step = 5; save(); render(); };
+  }
+
+  // ── STEP 5 ──
+  if (S.step === 5) {
+    const fHrs = q('f-hrs'), fMkt = q('f-mkt');
+    const updateCalc = () => {
+      if (fHrs) S.hoursPerWeek = fHrs.value;
+      if (fMkt) S.numMarketers = fMkt.value;
+      save();
+      const {annHrs, fteSave, ftePct, grand} = calcFTE();
+      const ch = q('cv-hrs'), cp = q('cv-pct'), cf = q('cv-fte'), cg = q('cv-grand');
+      if (ch) ch.textContent = fmt(annHrs);
+      if (cp) cp.textContent = ftePct + '%';
+      if (cf) cf.textContent = fmtE(fteSave);
+      if (cg) cg.textContent = fmtE(grand);
+    };
+    if (fHrs) fHrs.oninput = updateCalc;
+    if (fMkt) fMkt.oninput = updateCalc;
+
+    qa('[data-savlbl]').forEach(inp => {
+      inp.oninput = () => { S.additionalSavings[inp.dataset.savlbl].label = inp.value; save(); updateCalc(); };
+    });
+    qa('[data-savamt]').forEach(inp => {
+      inp.oninput = () => { S.additionalSavings[inp.dataset.savamt].amount = inp.value; save(); updateCalc(); };
+    });
+    qa('[data-del-sav]').forEach(btn => {
+      btn.onclick = () => { S.additionalSavings.splice(parseInt(btn.dataset.delSav),1); save(); render(); };
+    });
+
+    const addSav = q('btn-add-sav');
+    if (addSav) addSav.onclick = () => { if (!S.additionalSavings) S.additionalSavings=[]; S.additionalSavings.push({label:'',amount:''}); save(); render(); };
+
+    const next = q('btn-next');
+    if (next) next.onclick = () => { S.step = 6; save(); render(); };
+  }
+
+  // ── STEP 6 ──
+  if (S.step === 6) {
+    const btnCopy = q('btn-copy');
+    if (btnCopy) btnCopy.onclick = doCopy;
+    const btnPdf = q('btn-pdf');
+    if (btnPdf) btnPdf.onclick = doPdf;
+    const btnNew = q('btn-new');
+    if (btnNew) btnNew.onclick = () => {
+      if (confirm('This will clear all data and start a new customer session. Are you sure?')) {
+        localStorage.removeItem(STORAGE_KEY);
+        S = defaultState(); // step:0
+        render();
+      }
+    };
+  }
+}
+
+function bindDelUC() {
+  qa('[data-del-uc]').forEach(btn => {
+    btn.onclick = () => {
+      S.useCases.splice(parseInt(btn.dataset.delUc), 1);
+      save();
+      const list = q('uc-list');
+      if (list) {
+        if (S.useCases.length === 0) {
+          list.innerHTML = '<div class="empty-state">No use cases yet — type above and press Add or Enter.</div>';
+        } else {
+          list.innerHTML = S.useCases.map((uc,i) =>
+            `<li class="uc-item"><span class="uc-text">${esc(uc)}</span><button class="icon-btn" data-del-uc="${i}">×</button></li>`
+          ).join('');
+          bindDelUC();
+        }
+      }
+    };
+  });
+}
+
+function updateDelta(id) {
+  const el = q(`delta-${id}`);
+  if (!el) return;
+  const d = delta(id);
+  if (!d) { el.innerHTML = '<span style="color:#ccc">—</span>'; return; }
+  const sign = d.abs >= 0 ? '+' : '';
+  const pctStr = d.pct !== null ? ` (${parseFloat(d.pct)>=0?'+':''}${d.pct}%)` : '';
+  el.innerHTML = `<span class="${d.abs>=0?'dp':'dn'}">${sign}${fmt(d.abs)}${pctStr}</span>`;
+}
+
+// ─── EXPORT ─────────────────────────────────────────────────────────────────
+
+function buildCopyText() {
+  const {n, annHrs, fteSave, grand} = calcFTE();
+  const sel = METRICS.filter(m => S.selectedMetrics.includes(m.id));
+  const dateStr = today();
+  const addlRows = (S.additionalSavings||[]).filter(r=>r.label&&r.amount);
+  const addlText = addlRows.length>0
+    ? ` Additional identified savings of ${fmtE(addlRows.reduce((s,r)=>s+(parseFloat(r.amount)||0),0))} include ${addlRows.map(r=>r.label).join(', ')}.`
+    : '';
+  const narrative = `Prepared by ${S.emName} · ${dateStr}. By implementing Adobe Firefly Services, ${S.customerName} — a ${S.industry} business based in ${S.country} — could realise approximately ${fmtE(grand)} in annual value. Key efficiency gains span ${[...new Set(sel.map(m=>m.g.split(' ').slice(1).join(' ')))].join(', ')}. Across ${n} impacted marketers, this represents an estimated ${fmt(annHrs)} hours saved annually — equivalent to ${fmtE(fteSave)} in reclaimed FTE cost.${addlText}`;
+
+  return `FIREFLY FDE VALUE CAPTURE
+========================
+Prepared by: ${S.emName}
+Customer:    ${S.customerName}
+Industry:    ${S.industry}
+Country:     ${S.country}
+Date:        ${dateStr}
+
+USE CASES
+${S.useCases.map(u=>`• ${u}`).join('\n')}
+
+SELECTED METRICS
+${sel.map(m=>{
+  const d=delta(m.id);
+  const b=S.baselines[m.id]||'—';
+  const t=S.targets[m.id]||'—';
+  const u=S.units[m.id]||'';
+  const dStr=d?` (${d.abs>=0?'+':''}${fmt(d.abs)} / ${parseFloat(d.pct)>=0?'+':''}${d.pct}%)`: '';
+  return `• ${m.n.split(' (')[0]}: ${b} → ${t} ${u}${dStr}`;
+}).join('\n')}
+
+FTE VALUE
+Annual hours saved: ${fmt(annHrs)} hrs
+FTE cost saving:    ${fmtE(fteSave)}
+${addlRows.map(r=>`${r.label}: ${fmtE(parseFloat(r.amount))}`).join('\n')}
+
+TOTAL ESTIMATED ANNUAL VALUE: ${fmtE(grand)}
+
+NARRATIVE
+${narrative}`;
+}
+
+function doCopy() {
+  const text = buildCopyText();
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => alert('Copied to clipboard — ready to paste into Jira.'));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('Copied to clipboard — ready to paste into Jira.');
+  }
+}
+
+function doPdf() {
+  // Use print-to-PDF via window.print with a print-friendly layout
+  const {n, annHrs, fteSave, grand} = calcFTE();
+  const sel = METRICS.filter(m => S.selectedMetrics.includes(m.id));
+  const dateStr = today();
+  const addlRows = (S.additionalSavings||[]).filter(r=>r.label&&r.amount);
+  const addlText = addlRows.length>0
+    ? ` Additional identified savings of ${fmtE(addlRows.reduce((s,r)=>s+(parseFloat(r.amount)||0),0))} include ${addlRows.map(r=>r.label).join(', ')}.`
+    : '';
+  const narrative = `Prepared by ${S.emName} · ${dateStr}. By implementing Adobe Firefly Services, ${S.customerName} — a ${S.industry} business based in ${S.country} — could realise approximately ${fmtE(grand)} in annual value. Key efficiency gains span ${[...new Set(sel.map(m=>m.g.split(' ').slice(1).join(' ')))].join(', ')}. Across ${n} impacted marketers, this represents an estimated ${fmt(annHrs)} hours saved annually — equivalent to ${fmtE(fteSave)} in reclaimed FTE cost.${addlText}`;
+
+  const metRows = sel.map(m => {
+    const d = delta(m.id);
+    let dTxt = '—';
+    if (d) { const s=d.abs>=0?'+':''; dTxt=`${s}${fmt(d.abs)}${d.pct?` (${parseFloat(d.pct)>=0?'+':''}${d.pct}%)`:''}` }
+    return `<tr>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:11px">${esc(m.n.split(' (')[0])}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:11px;color:#666">${esc(S.baselines[m.id])||'—'}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:11px;color:#666">${esc(S.targets[m.id])||'—'}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:11px;color:${d&&d.abs>=0?'#166534':'#EB1000'}">${dTxt}</td>
+      <td style="padding:6px 8px;border-bottom:1px solid #eee;font-size:11px;color:#666">${esc(S.units[m.id]||'')}</td>
+    </tr>`;
+  }).join('');
+
+  const addlSection = addlRows.length > 0 ? `
+    <h3 style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#6E6E6E;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #E0E0E0">Additional Savings</h3>
+    ${addlRows.map(r=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #f0f0f0"><span>${esc(r.label)}</span><span style="font-weight:600">${fmtE(parseFloat(r.amount))}</span></div>`).join('')}
+  ` : '';
+
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Firefly FDE Value Capture — ${esc(S.customerName)}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:system-ui,sans-serif;color:#2C2C2C;font-size:13px;line-height:1.5}
+    @page{margin:20mm 18mm}
+    .cover{background:#000;color:#fff;height:100vh;padding:48px;display:flex;flex-direction:column;justify-content:space-between;break-after:page;page-break-after:always}
+    .cover-top .logo{font-size:18px;font-weight:700;color:#EB1000}
+    .cover-mid h1{font-size:36px;font-weight:700;margin-bottom:8px}
+    .cover-mid p{font-size:14px;color:rgba(255,255,255,.6)}
+    .cover-bot .meta{font-size:13px;color:rgba(255,255,255,.7)}
+    .cover-bot .total-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.5);margin-top:32px}
+    .cover-bot .total-val{font-size:32px;font-weight:700;color:#fff}
+    .content{padding:0}
+    h2{font-size:18px;font-weight:700;margin:0 0 16px}
+    .fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+    .f{background:#F5F5F5;border-radius:4px;padding:8px 12px}
+    .fl{font-size:9px;text-transform:uppercase;letter-spacing:.4px;color:#6E6E6E;font-weight:700}
+    .fv{font-size:13px;font-weight:500}
+    h3{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#6E6E6E;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #E0E0E0}
+    .uc-item{padding:5px 0;font-size:12px;border-bottom:1px solid #f0f0f0}
+    .uc-item::before{content:"· ";color:#EB1000;font-weight:700}
+    table{width:100%;border-collapse:collapse}
+    th{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:#6E6E6E;padding:6px 8px;border-bottom:1px solid #E0E0E0;text-align:left;font-weight:700}
+    .big-total{background:#000;color:#fff;border-radius:6px;padding:20px 24px;margin:20px 0;text-align:center}
+    .bt-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.6);margin-bottom:8px}
+    .bt-val{font-size:36px;font-weight:700}
+    .narrative{background:#f8f8f8;border-left:3px solid #E0E0E0;padding:14px 18px;font-size:12px;line-height:1.7;color:#444;margin-top:8px}
+    @media print{.cover{height:100vh}}
+  </style></head><body>
+  <div class="cover">
+    <div class="cover-top"><div class="logo">Adobe</div></div>
+    <div class="cover-mid">
+      <h1>Firefly FDE<br>Value Capture</h1>
+      <p>Forward Deployed Engineering · FDE Value Capture Workshop</p>
+    </div>
+    <div class="cover-bot">
+      <div class="meta">${esc(S.customerName)}</div>
+      <div class="meta">Prepared by ${esc(S.emName)}</div>
+      <div class="meta">${dateStr}</div>
+      <div class="total-lbl">Total Estimated Annual Value</div>
+      <div class="total-val">${fmtE(grand)}</div>
+    </div>
+  </div>
+  <div class="content">
+    <h2>Value Capture Summary</h2>
+    <div class="fields">
+      <div class="f"><div class="fl">EM Name</div><div class="fv">${esc(S.emName)}</div></div>
+      <div class="f"><div class="fl">Customer</div><div class="fv">${esc(S.customerName)}</div></div>
+      <div class="f"><div class="fl">Industry</div><div class="fv">${esc(S.industry)}</div></div>
+      <div class="f"><div class="fl">Country</div><div class="fv">${esc(S.country)}</div></div>
+      <div class="f"><div class="fl">Date</div><div class="fv">${dateStr}</div></div>
+    </div>
+    <h3>Use Cases</h3>
+    ${S.useCases.map(u=>`<div class="uc-item">${esc(u)}</div>`).join('')}
+    <h3>Selected Metrics</h3>
+    <table>
+      <thead><tr><th>Metric</th><th>Baseline</th><th>Target</th><th>Delta</th><th>Unit</th></tr></thead>
+      <tbody>${metRows}</tbody>
+    </table>
+    ${annHrs>0?`<h3>FTE Value</h3><div style="font-size:12px;color:#2C2C2C">${fmtE(fteSave)} — ${fmt(annHrs)} hours saved across ${n} marketers</div>`:''}
+    ${addlSection}
+    <div class="big-total"><div class="bt-lbl">Total Estimated Annual Value</div><div class="bt-val">${fmtE(grand)}</div></div>
+    <h3>Narrative</h3>
+    <div class="narrative">${esc(narrative)}</div>
+  </div>
+  <script>window.onload=()=>window.print()<\/script>
+  </body></html>`);
+  win.document.close();
+}
+
+// ─── INIT ───────────────────────────────────────────────────────────────────
+
+(function init() {
+  const saved = load();
+  if (saved && saved.customerName) {
+    const overlay = q('modal-overlay');
+    const body = q('modal-body');
+    const savedDate = saved.savedAt ? new Date(saved.savedAt).toLocaleDateString('en-GB') : '';
+    body.innerHTML = `Found a saved session for <strong>${esc(saved.customerName)}</strong> (${esc(saved.emName)}).${savedDate?' Last saved '+savedDate+'.':''}<br><br>Continue where you left off, or start a new customer?`;
+    overlay.classList.add('show');
+
+    q('btn-resume').onclick = () => {
+      S = saved;
+      overlay.classList.remove('show');
+      render();
+    };
+    q('btn-fresh').onclick = () => {
+      localStorage.removeItem(STORAGE_KEY);
+      S = defaultState();
+      overlay.classList.remove('show');
+      render();
+    };
+  } else {
+    render();
+  }
+})();
+</script>
+</body>
+</html>
