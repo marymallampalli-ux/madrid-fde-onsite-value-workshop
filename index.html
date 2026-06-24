@@ -295,7 +295,8 @@ function defaultState() {
   return {
     step:0, emName:'', customerName:'', industry:'', country:'',
     useCases:[], selectedMetrics:[], baselines:{}, targets:{}, units:{},
-    hoursPerWeek:'', numMarketers:'', additionalSavings:[], savedAt:null
+    hoursPerWeek:'', numMarketers:'', additionalSavings:[],
+    licenseFee:'', apiOps:'', genCredits:'', savedAt:null
   };
 }
 
@@ -629,6 +630,25 @@ function step5HTML() {
       <div class="calc-box"><div class="calc-lbl">FTE cost saving</div><div class="calc-val" id="cv-fte" style="font-size:17px">${fmtE(fteSave)}</div></div>
     </div>
     <div class="sep"></div>
+    <div style="margin-bottom:20px">
+      <div style="font-size:14px;font-weight:700;color:var(--black);margin-bottom:4px">Contract Entitlements</div>
+      <div style="font-size:13px;color:var(--mid);margin-bottom:16px">Record the purchased licence terms for reference in the ROI summary.</div>
+      <div class="calc-grid">
+        <div>
+          <label>Annual licence fee (€)</label>
+          <input type="number" class="field" id="f-licence" placeholder="e.g. 250000" value="${esc(S.licenseFee)}" min="0"/>
+        </div>
+        <div>
+          <label>Purchased API operations</label>
+          <input type="number" class="field" id="f-apiops" placeholder="e.g. 5000000" value="${esc(S.apiOps)}" min="0"/>
+        </div>
+      </div>
+      <div style="max-width:calc(50% - 10px)">
+        <label>Purchased generative credits</label>
+        <input type="number" class="field" id="f-credits" placeholder="e.g. 25000" value="${esc(S.genCredits)}" min="0"/>
+      </div>
+    </div>
+    <div class="sep"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <label style="margin:0">Additional Savings &amp; Revenue Impact</label>
       <button class="btn btn-secondary btn-sm" id="btn-add-sav">+ Add row</button>
@@ -693,6 +713,25 @@ function step6HTML() {
     <div style="font-size:13px;color:var(--charcoal)">${fmtE(fteSave)} — ${fmt(annHrs)} hours saved across ${n} marketers</div>
   ` : '';
 
+  const hasEntitlements = S.licenseFee || S.apiOps || S.genCredits;
+  const entitlementsHTML = hasEntitlements ? `
+    <div class="ssec">Contract Entitlements</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+      <div class="sum-field">
+        <div class="sf-lbl">Annual Licence Fee</div>
+        <div class="sf-val">${S.licenseFee ? fmtE(parseFloat(S.licenseFee)) : '—'}</div>
+      </div>
+      <div class="sum-field">
+        <div class="sf-lbl">Purchased API Operations</div>
+        <div class="sf-val">${S.apiOps ? fmt(parseFloat(S.apiOps)) : '—'}</div>
+      </div>
+      <div class="sum-field">
+        <div class="sf-lbl">Purchased Generative Credits</div>
+        <div class="sf-val">${S.genCredits ? fmt(parseFloat(S.genCredits)) : '—'}</div>
+      </div>
+    </div>
+  ` : '';
+
   return `<div class="card">
     <div class="card-title">ROI Summary</div>
     <div class="card-sub">Your complete value capture plan — ready to export to Jira or download as a PDF brief.</div>
@@ -711,6 +750,7 @@ function step6HTML() {
     </div>
 
     ${fteHTML}
+    ${entitlementsHTML}
     ${addlHTML}
 
     <div class="big-total">
@@ -867,6 +907,11 @@ function bindEvents() {
     if (fHrs) fHrs.oninput = updateCalc;
     if (fMkt) fMkt.oninput = updateCalc;
 
+    const fLic = q('f-licence'), fApi = q('f-apiops'), fCred = q('f-credits');
+    if (fLic) fLic.oninput = () => { S.licenseFee = fLic.value; save(); };
+    if (fApi) fApi.oninput = () => { S.apiOps = fApi.value; save(); };
+    if (fCred) fCred.oninput = () => { S.genCredits = fCred.value; save(); };
+
     qa('[data-savlbl]').forEach(inp => {
       inp.oninput = () => { S.additionalSavings[inp.dataset.savlbl].label = inp.value; save(); updateCalc(); };
     });
@@ -968,6 +1013,11 @@ FTE VALUE
 Annual hours saved: ${fmt(annHrs)} hrs
 FTE cost saving:    ${fmtE(fteSave)}
 ${addlRows.map(r=>`${r.label}: ${fmtE(parseFloat(r.amount))}`).join('\n')}
+
+CONTRACT ENTITLEMENTS
+Annual licence fee:           ${S.licenseFee ? fmtE(parseFloat(S.licenseFee)) : '—'}
+Purchased API operations:     ${S.apiOps ? fmt(parseFloat(S.apiOps)) : '—'}
+Purchased generative credits: ${S.genCredits ? fmt(parseFloat(S.genCredits)) : '—'}
 
 TOTAL ESTIMATED ANNUAL VALUE: ${fmtE(grand)}
 
@@ -1079,6 +1129,13 @@ function doPdf() {
       <tbody>${metRows}</tbody>
     </table>
     ${annHrs>0?`<h3>FTE Value</h3><div style="font-size:12px;color:#2C2C2C">${fmtE(fteSave)} — ${fmt(annHrs)} hours saved across ${n} marketers</div>`:''}
+    ${(S.licenseFee||S.apiOps||S.genCredits)?`
+      <h3>Contract Entitlements</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div style="background:#F5F5F5;border-radius:4px;padding:8px 12px"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.4px;color:#6E6E6E;font-weight:700;margin-bottom:3px">Annual Licence Fee</div><div style="font-size:13px;font-weight:500">${S.licenseFee?fmtE(parseFloat(S.licenseFee)):'—'}</div></div>
+        <div style="background:#F5F5F5;border-radius:4px;padding:8px 12px"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.4px;color:#6E6E6E;font-weight:700;margin-bottom:3px">API Operations</div><div style="font-size:13px;font-weight:500">${S.apiOps?fmt(parseFloat(S.apiOps)):'—'}</div></div>
+        <div style="background:#F5F5F5;border-radius:4px;padding:8px 12px"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.4px;color:#6E6E6E;font-weight:700;margin-bottom:3px">Generative Credits</div><div style="font-size:13px;font-weight:500">${S.genCredits?fmt(parseFloat(S.genCredits)):'—'}</div></div>
+      </div>`:''}
     ${addlSection}
     <div class="big-total"><div class="bt-lbl">Total Estimated Annual Value</div><div class="bt-val">${fmtE(grand)}</div></div>
     <h3>Narrative</h3>
